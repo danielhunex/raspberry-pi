@@ -1,15 +1,13 @@
-#include <stdio.h>
-
-int main(void)
-{
-    FILE *temperatureFile;
-    double T;
-    temperatureFile = fopen("/sys/class/thermal/thermal_zone0/temp", "r");
-    if (temperatureFile == NULL)
-        ; //print some message
-    fscanf(temperatureFile, "%lf", &T);
-    T /= 1000;
-    printf("The temperature is %6.3f C.\n", T);
-    fclose(temperatureFile);
-    return 0;
-}
+    #include <opencv2/opencv.hpp> 
+    int main() 
+    { 
+       cv::Mat img = cv::imread("file.jpg"); 
+       int darray[10000][10000]; 
+       for(int i=0;i<img.cols;i++) 
+          { 
+             for(int j=0;j<img.rows;j++) 
+                { 
+                   darray[i][j]=img.at<int>(i,j); 
+                } 
+          } 
+    } 
