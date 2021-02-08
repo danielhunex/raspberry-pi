@@ -158,11 +158,11 @@ int draw3264(u_int8_t (*matrix)[32][64])
 int draw233(u_int8_t width, u_int8_t height, u_int8_t (*matrix)[height][width], u_int8_t x, int y)
 {
     //validation of inputs
-    for (u_int8_t i = x; i < 32; i++)
+    for (u_int8_t i = 0; i < 16; i++)
     {
 
         for (u_int8_t b = 0; b < 3; b++)
-        { //RGB 332 
+        { //RGB 332
             for (u_int8_t j = 0; j < 64; j++)
             {
 
@@ -171,13 +171,19 @@ int draw233(u_int8_t width, u_int8_t height, u_int8_t (*matrix)[height][width], 
 
                 if (j >= y && j - y < width) //two bytes for color
                 {
-                    if (i < 16)
+
+                    if (i < x && height - x > 0)
+                    {
+                        colorLower = (*matrix)[i + x][j - y];
+                    }
+                    else if (i < 16 && i - x < 16)
                     {
                         colorUpper = (*matrix)[i - x][j - y];
-                    }
-                    else
-                    {
-                        colorLower = (*matrix)[i - x][j - y];
+
+                        if (16 + i - x < height)
+                        {
+                            colorLower = (*matrix)[16 + i - x][j - y];
+                        }
                     }
                 }
 
@@ -216,7 +222,7 @@ int draw233(u_int8_t width, u_int8_t height, u_int8_t (*matrix)[height][width], 
             selectRow(i);
             bcm2835_gpio_write(OE, LOW);
             delayMicroseconds(pow(2, b));
-           // bcm2835_gpio_write(OE, HIGH);
+            // bcm2835_gpio_write(OE, HIGH);
         }
     }
     return 1;
@@ -283,21 +289,19 @@ int drawText(const char *str, u_int8_t x, u_int8_t y)
     return 1;
 }
 
-//merges two 24 by 24 matrixes into one 32 by 64
-u_int8_t (*draw(u_int8_t matrix1[24][48], u_int8_t x1, u_int8_t y1, u_int8_t matrix2[24][48], u_int8_t x2, u_int8_t y2))[32][64]
+int merge(u_int8_t matrix1[24][48], u_int8_t x1, u_int8_t y1, u_int8_t matrix2[24][48], u_int8_t x2, u_int8_t y2, u_int16_t matrix[32][64])
 {
-    u_int16_t matrix[32][64] = {0};
 
     for (u_int8_t i = x1, r = x2; i < 32; r++, i++)
     {
-        for (u_int8_t j = y1, z = y2, k = 0; j < 64; z++, k += 2, j++)
+        for (u_int8_t j = y1, z = y2, k = 0; j < 64; z++, k++, j++)
         {
-            matrix[i][j] = matrix1[i - x1][k] << 8 | matrix1[i - x1][k + 1];
-            matrix[r][z] = matrix1[r - x2][k] << 8 | matrix1[r - x2][k + 1];
+            matrix[i][j] = matrix1[i - x1][k];
+            matrix[r][z] = matrix1[r - x2][z];
         }
     }
 
-    return matrix;
+    return 1;
 }
 
 int main(void)
@@ -309,7 +313,6 @@ int main(void)
     u_int8_t(*manchester)[24][24];
     manchester = &manchesterFc;
 
-    
     u_int8_t(*liverpool)[24][48];
     liverpool = &liverpool;
 
