@@ -1,3 +1,4 @@
+// gcc -Wall -pedantic -o matrix  ledmatrix.c  -l bcm2835 -l m
 #include <bcm2835.h>
 #include <stdio.h>
 #include <assert.h>
@@ -154,43 +155,54 @@ int draw3264(u_int8_t (*matrix)[32][64])
     return 1;
 }
 
-int draw565(u_int16_t (*matrix)[24][48])
+int draw233(u_int8_t width, u_int8_t height, u_int8_t (*matrix)[height][width], u_int8_t x, int y)
 {
-
-    for (u_int8_t i = 0; i < 32; i++)
+    //validation of inputs
+    for (u_int8_t i = x; i < 32; i++)
     {
 
-        for (u_int8_t b = 0; b < 6; b++)
-        { //BGR 5 6 5
-            for (u_int8_t j = 0, k = 0; j < 64; k += 2, j++)
+        for (u_int8_t b = 0; b < 3; b++)
+        { //RGB 332 
+            for (u_int8_t j = 0; j < 64; j++)
             {
 
                 u_int16_t colorUpper = 0;
                 u_int16_t colorLower = 0;
 
-                if (k < 48)
+                if (j >= y && j - y < width) //two bytes for color
                 {
                     if (i < 16)
                     {
-                        colorUpper = (*matrix)[i][k] << 8 | (*matrix)[i][k + 1];
+                        colorUpper = (*matrix)[i - x][j - y];
                     }
                     else
                     {
-                        colorLower = (*matrix)[i][k] << 8 | (*matrix)[i][k + 1];
+                        colorLower = (*matrix)[i - x][j - y];
                     }
                 }
 
-                u_int8_t blue1 = b > 4 ? 0 : colorUpper & (1 << b);
-                u_int8_t green1 = colorUpper & (1 << (b + 5));
-                u_int8_t red1 = b > 4 ? 0 : colorUpper & (1 << (11));
+                u_int8_t blue1 = 0;
+                u_int8_t green1 = 0;
+                u_int8_t red1 = 0;
+
+                u_int8_t blue2 = 0;
+                u_int8_t green2 = 0;
+                u_int8_t red2 = 0;
+
+                if (j - y >= 0 && j - y < width)
+                {
+                    blue1 = b > 2 ? 0 : colorUpper & (1 << b);
+                    green1 = colorUpper & (1 << (b + 3));
+                    red1 = colorUpper & (1 << (b + 6));
+
+                    blue2 = b > 4 ? 0 : colorLower & (1 << (b));
+                    green2 = colorLower & (1 << (b + 3));
+                    red2 = colorLower & (1 << (b + 6));
+                }
 
                 bcm2835_gpio_write(RED_UPPER, red1 ? HIGH : LOW);
                 bcm2835_gpio_write(GREEN_UPPER, green1 ? HIGH : LOW);
                 bcm2835_gpio_write(BLUE_UPPER, blue1 ? HIGH : LOW);
-
-                u_int8_t blue2 = b > 4 ? 0 : colorLower & (1 << b);
-                u_int8_t green2 = colorLower & (1 << (b + 5));
-                u_int8_t red2 = b > 4 ? 0 : colorLower & (1 << (11));
 
                 bcm2835_gpio_write(RED_LOWER, red2 ? HIGH : LOW);
                 bcm2835_gpio_write(GREEN_LOWER, green2 ? HIGH : LOW);
@@ -204,7 +216,7 @@ int draw565(u_int16_t (*matrix)[24][48])
             selectRow(i);
             bcm2835_gpio_write(OE, LOW);
             delayMicroseconds(pow(2, b));
-            // bcm2835_gpio_write(OE, HIGH);
+           // bcm2835_gpio_write(OE, HIGH);
         }
     }
     return 1;
@@ -271,32 +283,35 @@ int drawText(const char *str, u_int8_t x, u_int8_t y)
     return 1;
 }
 
+//merges two 24 by 24 matrixes into one 32 by 64
+u_int8_t (*draw(u_int8_t matrix1[24][48], u_int8_t x1, u_int8_t y1, u_int8_t matrix2[24][48], u_int8_t x2, u_int8_t y2))[32][64]
+{
+    u_int16_t matrix[32][64] = {0};
+
+    for (u_int8_t i = x1, r = x2; i < 32; r++, i++)
+    {
+        for (u_int8_t j = y1, z = y2, k = 0; j < 64; z++, k += 2, j++)
+        {
+            matrix[i][j] = matrix1[i - x1][k] << 8 | matrix1[i - x1][k + 1];
+            matrix[r][z] = matrix1[r - x2][k] << 8 | matrix1[r - x2][k + 1];
+        }
+    }
+
+    return matrix;
+}
+
 int main(void)
 {
-    // u_int8_t matrix[16][64] = {
-    //     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    //     {0, 0, 6, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    //     {0, 0, 6, 2, 1, 0, 0, 0, 0, 0, 0, 0, 1, 2, 6, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    //     {0, 0, 6, 2, 1, 1, 0, 0, 0, 0, 0, 1, 1, 2, 6, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    //     {0, 0, 6, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    //     {0, 0, 6, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    //     {0, 0, 6, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 0, 0, 0, 3, 2, 2, 2, 2, 2, 2, 2, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    //     {0, 0, 6, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 0, 0, 0, 3, 2, 2, 2, 2, 2, 2, 2, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    //     {0, 0, 6, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    //     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    //     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    //     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    // };
 
-    //  u_int8_t (*matrix)[8][8];
-    // matrix = &A;
+    u_int8_t(*chelsea)[24][24];
+    chelsea = &chelseaFC;
 
-    // u_int8_t(*matrix)[32][16]
+    u_int8_t(*manchester)[24][24];
+    manchester = &manchesterFc;
 
-    // matrix = &umbrella;
-
-    u_int16_t(*matrix)[24][48];
-    matrix = &chelseaFC;
+    
+    u_int8_t(*liverpool)[24][48];
+    liverpool = &liverpool;
 
     u_int16_t intialized = bcm2835_init();
 
@@ -311,7 +326,7 @@ int main(void)
 
     {
         //   drawText(letter, 0, 0);
-        draw565(matrix);
+        draw233(24, 24, manchesterFc, 8, 8);
     }
 
     return 0;
