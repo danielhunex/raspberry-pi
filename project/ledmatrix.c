@@ -198,8 +198,8 @@ int draw233(u_int8_t width, u_int8_t height, u_int8_t (*matrix)[height][width], 
                 if (j - y >= 0 && j - y < width)
                 {
                     blue1 = b > 2 ? 0 : colorUpper & (1 << b);
-                    green1 = colorUpper & (1 << (b + 3));
-                    red1 = colorUpper & (1 << (b + 6));
+                    green1 = colorUpper & (1 << (b + 2));
+                    red1 = colorUpper & (1 << (b + 5));
 
                     blue2 = b > 4 ? 0 : colorLower & (1 << (b));
                     green2 = colorLower & (1 << (b + 3));
@@ -313,8 +313,8 @@ int main(void)
     u_int8_t(*manchester)[24][24];
     manchester = &manchesterFc;
 
-    u_int8_t(*liverpool)[24][48];
-    liverpool = &liverpool;
+    u_int8_t(*liverpool)[24][24];
+    liverpool = &liverpoolFc;
 
     u_int16_t intialized = bcm2835_init();
 
@@ -322,14 +322,13 @@ int main(void)
 
     intialized = setup();
     assert(intialized == 1);
-
     char *letter = "I love you mare! 0-1";
 
     while (1)
 
     {
         //   drawText(letter, 0, 0);
-        draw233(24, 24, manchesterFc, 8, 8);
+        draw233(24, 24, arsenalFC, 8, 0);
     }
 
     return 0;
