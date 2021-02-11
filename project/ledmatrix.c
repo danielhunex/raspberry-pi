@@ -6,6 +6,10 @@
 #include <math.h>
 #include "chelsea.h"
 #include "font/font8x8.h"
+#include <time.h>
+#include <stdio.h>
+
+#define atoa(x) #x
 
 #define RED_UPPER RPI_V2_GPIO_P1_29   //GPIO5
 #define GREEN_UPPER RPI_V2_GPIO_P1_33 //GPIO 13
@@ -67,7 +71,7 @@ int setup(void)
     return 1;
 }
 
-int clock()
+int clockData()
 {
     bcm2835_gpio_write(CLK, HIGH);
     bcm2835_gpio_write(CLK, LOW);
@@ -110,7 +114,7 @@ int setPixel(u_int8_t x, u_int8_t y, u_int8_t r, u_int8_t g, u_int8_t b)
         bcm2835_gpio_write(GREEN_LOWER, g ? HIGH : LOW);
         bcm2835_gpio_write(BLUE_LOWER, b ? HIGH : LOW);
     }
-    clock();
+    clockData();
 
     return 1;
 }
@@ -140,7 +144,7 @@ int draw3264(u_int8_t (*matrix)[32][64])
                 bcm2835_gpio_write(RED_LOWER, colorLower & (1 << (b + 6)) ? HIGH : LOW);
                 bcm2835_gpio_write(GREEN_LOWER, colorLower & (1 << (3 + b)) ? HIGH : LOW);
                 bcm2835_gpio_write(BLUE_LOWER, blue2 ? HIGH : LOW);
-                clock();
+                clockData();
             }
 
             bcm2835_gpio_write(OE, HIGH);
@@ -158,35 +162,14 @@ int draw3264(u_int8_t (*matrix)[32][64])
 int draw233(u_int8_t width, u_int8_t height, u_int8_t (*matrix)[height][width], u_int8_t x, int y)
 {
     //validation of inputs
-    for (u_int8_t i = 0; i < 16; i++)
+    for (u_int8_t i = x; i < x + height; i++)
     {
-
         for (u_int8_t b = 0; b < 3; b++)
         { //RGB 332
             for (u_int8_t j = 0; j < 64; j++)
             {
-
                 u_int16_t colorUpper = 0;
                 u_int16_t colorLower = 0;
-
-                if (j >= y && j - y < width) //two bytes for color
-                {
-
-                    if (i < x && height - x > 0)
-                    {
-                        colorLower = (*matrix)[i + x][j - y];
-                    }
-                    else if (i < 16 && i - x < 16)
-                    {
-                        colorUpper = (*matrix)[i - x][j - y];
-
-                        if (16 + i - x < height)
-                        {
-                            colorLower = (*matrix)[16 + i - x][j - y];
-                        }
-                    }
-                }
-
                 u_int8_t blue1 = 0;
                 u_int8_t green1 = 0;
                 u_int8_t red1 = 0;
@@ -195,8 +178,12 @@ int draw233(u_int8_t width, u_int8_t height, u_int8_t (*matrix)[height][width], 
                 u_int8_t green2 = 0;
                 u_int8_t red2 = 0;
 
-                if (j - y >= 0 && j - y < width)
+                if (j - y < width)
                 {
+
+                    colorLower = (*matrix)[i - x][j - y];
+                    colorUpper = (*matrix)[i - x][j - y];
+
                     blue1 = b > 2 ? 0 : colorUpper & (1 << b);
                     green1 = colorUpper & (1 << (b + 2));
                     red1 = colorUpper & (1 << (b + 5));
@@ -206,14 +193,19 @@ int draw233(u_int8_t width, u_int8_t height, u_int8_t (*matrix)[height][width], 
                     red2 = colorLower & (1 << (b + 6));
                 }
 
-                bcm2835_gpio_write(RED_UPPER, red1 ? HIGH : LOW);
-                bcm2835_gpio_write(GREEN_UPPER, green1 ? HIGH : LOW);
-                bcm2835_gpio_write(BLUE_UPPER, blue1 ? HIGH : LOW);
-
-                bcm2835_gpio_write(RED_LOWER, red2 ? HIGH : LOW);
-                bcm2835_gpio_write(GREEN_LOWER, green2 ? HIGH : LOW);
-                bcm2835_gpio_write(BLUE_LOWER, blue2 ? HIGH : LOW);
-                clock();
+                if (i < 16)
+                {
+                    bcm2835_gpio_write(RED_UPPER, red1 ? HIGH : LOW);
+                    bcm2835_gpio_write(GREEN_UPPER, green1 ? HIGH : LOW);
+                    bcm2835_gpio_write(BLUE_UPPER, blue1 ? HIGH : LOW);
+                }
+                else
+                {
+                    bcm2835_gpio_write(RED_LOWER, red2 ? HIGH : LOW);
+                    bcm2835_gpio_write(GREEN_LOWER, green2 ? HIGH : LOW);
+                    bcm2835_gpio_write(BLUE_LOWER, blue2 ? HIGH : LOW);
+                }
+                clockData();
             }
 
             bcm2835_gpio_write(OE, HIGH);
@@ -264,7 +256,7 @@ int drawChar(char c, u_int8_t row, u_int8_t column)
                 bcm2835_gpio_write(GREEN_LOWER, g ? HIGH : LOW);
                 bcm2835_gpio_write(BLUE_LOWER, b ? HIGH : LOW);
             }
-            clock();
+            clockData();
         }
         bcm2835_gpio_write(OE, HIGH);
         latchData();
@@ -289,15 +281,63 @@ int drawText(const char *str, u_int8_t x, u_int8_t y)
     return 1;
 }
 
-int merge(u_int8_t matrix1[24][48], u_int8_t x1, u_int8_t y1, u_int8_t matrix2[24][48], u_int8_t x2, u_int8_t y2, u_int16_t matrix[32][64])
+int addScore(char *score1, u_int8_t startX, u_int8_t startY, u_int8_t matrix[32][64])
+{
+    char *str = score1;
+    u_int8_t x = startX;
+    u_int8_t y = startY;
+    while (*str)
+    {
+        char c = *str++;
+        u_int8_t charIndex = c;
+        const u_int8_t *chr = font8x8_basic[charIndex];
+
+        for (int i = x; i < x + CHAR_HEIGHT; i++)
+        {
+            for (int j = y; j < y + CHAR_WIDTH; j++)
+            {
+                matrix[i][j] = (chr[i-x] & (1 << (j - y))) ? 255 : 0;
+            }
+        }
+        y += CHAR_WIDTH;
+    }
+
+    return 1;
+}
+
+int addTime(u_int8_t matrix[32][64])
+{
+    //time_t now = time(NULL);
+    // struct tm *tm_struct = localtime(&now);
+
+    // int hour = tm_struct->tm_hour;
+    // int minute = tm_struct->tm_min;
+
+    // char *string = atoa(hour) + ":" + atoa(minute);
+    // addScore(string, 2, 24, matrix);
+
+    addScore("8:1", 2, 24, matrix);
+
+    return 1;
+}
+
+int merge(u_int8_t matrix1[24][24], u_int8_t x1, u_int8_t y1, u_int8_t matrix2[24][24], u_int8_t x2, u_int8_t y2, u_int8_t matrix[32][64])
 {
 
-    for (u_int8_t i = x1, r = x2; i < 32; r++, i++)
+    //TODO: optimize this to do in one loop (with row and column counter)
+    for (u_int8_t i = x1; i < 24 + x1; i++)
     {
-        for (u_int8_t j = y1, z = y2, k = 0; j < 64; z++, k++, j++)
+        for (u_int8_t j = y1; j < 24 + y1; j++)
         {
-            matrix[i][j] = matrix1[i - x1][k];
-            matrix[r][z] = matrix1[r - x2][z];
+            matrix[i][j] = matrix1[i - x1][j - y1];
+        }
+    }
+
+    for (u_int8_t i = x2; i < 24 + x2; i++)
+    {
+        for (u_int8_t j = y2; j < 24 + y2; j++)
+        {
+            matrix[i][j] = matrix2[i - x2][j - y2];
         }
     }
 
@@ -324,11 +364,20 @@ int main(void)
     assert(intialized == 1);
     char *letter = "I love you mare! 0-1";
 
-    while (1)
+    u_int8_t matrix[32][64] = {0};
 
+    char *score = "4";
+    char *score2 = "6";
+
+    addScore(score, 0, 8, matrix);
+    addScore(score2, 0, 48, matrix);
+    addTime(matrix);
+    while (1)
     {
-        //   drawText(letter, 0, 0);
-        draw233(24, 24, arsenalFC, 8, 0);
+        merge(manchesterFc, 8, 0, chelseaFC, 8, 40, matrix);
+
+        // drawText(letter, 2, 3);
+        draw233(64, 32, matrix, 0, 0);
     }
 
     return 0;
