@@ -6,10 +6,11 @@
 #include <math.h>
 #include "chelsea.h"
 #include "font/font8x8.h"
+#include "font/font8x6.h"
+#include "font/font6x5.h"
+#include "font/font3x5.h"
 #include <time.h>
 #include <stdio.h>
-
-#define atoa(x) #x
 
 #define RED_UPPER RPI_V2_GPIO_P1_29   //GPIO5
 #define GREEN_UPPER RPI_V2_GPIO_P1_33 //GPIO 13
@@ -28,7 +29,7 @@
 #define ADDRESS_D RPI_V2_GPIO_P1_38 //GPIO 20
 
 #define CHAR_WIDTH 8
-#define CHAR_HEIGHT 8
+#define CHAR_HEIGHT 6
 
 #define ADDRESS_MASK 0xF
 
@@ -222,9 +223,9 @@ int draw233(u_int8_t width, u_int8_t height, u_int8_t (*matrix)[height][width], 
 
 int drawChar(char c, u_int8_t row, u_int8_t column)
 {
-    u_int8_t charIndex = c;
 
-    const u_int8_t *chr = font8x8_basic[charIndex];
+    u_int8_t charIndex = c;
+    const u_int8_t *chr = smallFont[charIndex];
 
     for (u_int8_t i = row; i < row + CHAR_HEIGHT; i++)
     {
@@ -238,9 +239,9 @@ int drawChar(char c, u_int8_t row, u_int8_t column)
 
             if ((j - column) < CHAR_WIDTH)
             {
-                r = chr[i - row] & 1 << (j - column);
-                b = chr[i - row] & 1 << (j - column);
-                g = chr[i - row] & 1 << (j - column);
+                r = chr[i - row] & (1 << (j - column));
+                b = chr[i - row] & (1 << (j - column));
+                g = chr[i - row] & (1 << (j - column));
             }
 
             if (i < 16)
@@ -270,7 +271,7 @@ int drawText(const char *str, u_int8_t x, u_int8_t y)
 {
     while (*str)
     {
-        if (y >= 64)
+        if (64 - y < CHAR_WIDTH)
         {
             y = 0;
             x += CHAR_HEIGHT + 1;
@@ -290,13 +291,13 @@ int addScore(char *score1, u_int8_t startX, u_int8_t startY, u_int8_t matrix[32]
     {
         char c = *str++;
         u_int8_t charIndex = c;
-        const u_int8_t *chr = font8x8_basic[charIndex];
+        const u_int8_t *chr = font6x8[charIndex];
 
         for (int i = x; i < x + CHAR_HEIGHT; i++)
         {
             for (int j = y; j < y + CHAR_WIDTH; j++)
             {
-                matrix[i][j] = (chr[i-x] & (1 << (j - y))) ? 255 : 0;
+                matrix[i][j] = (chr[i - x] & (1 << (j - y))) ? 255 : 0;
             }
         }
         y += CHAR_WIDTH;
@@ -305,7 +306,7 @@ int addScore(char *score1, u_int8_t startX, u_int8_t startY, u_int8_t matrix[32]
     return 1;
 }
 
-int addTime(u_int8_t matrix[32][64])
+int addTime(u_int8_t matrix[32][64], char *time)
 {
     //time_t now = time(NULL);
     // struct tm *tm_struct = localtime(&now);
@@ -316,7 +317,7 @@ int addTime(u_int8_t matrix[32][64])
     // char *string = atoa(hour) + ":" + atoa(minute);
     // addScore(string, 2, 24, matrix);
 
-    addScore("8:1", 2, 24, matrix);
+    addScore(time, 1, 18, matrix);
 
     return 1;
 }
@@ -362,21 +363,47 @@ int main(void)
 
     intialized = setup();
     assert(intialized == 1);
-    char *letter = "I love you mare! 0-1";
+    char *letter = "ABCDE01234567891";
+
+    int msec = 0, trigger = 10; /* 10ms */
+    int minutes = 0;
+    int seconds = 0;
+    clock_t start = clock();
+    char playTime[6] = {0};
 
     u_int8_t matrix[32][64] = {0};
 
     char *score = "4";
     char *score2 = "6";
 
-    addScore(score, 0, 8, matrix);
-    addScore(score2, 0, 48, matrix);
-    addTime(matrix);
+    addScore(score, 0, 4, matrix);
+    addScore(score2, 0, 52, matrix);
+    //  addTime(matrix);
     while (1)
     {
+        clock_t now = clock();
+        clock_t difference = now - start;
+        msec = difference / CLOCKS_PER_SEC;
+
+        if (msec >= 1)
+        {
+            seconds += msec;
+
+            if (seconds >= 60)
+            {
+                minutes += 1;
+                seconds -= 60;
+            }
+            sprintf(playTime, "%02d:%02d", minutes, seconds);
+
+            char *cs = playTime;
+            addTime(matrix, cs);
+            start = now;
+        }
+
         merge(manchesterFc, 8, 0, chelseaFC, 8, 40, matrix);
 
-        // drawText(letter, 2, 3);
+        //drawText(letter, 0, 0);
         draw233(64, 32, matrix, 0, 0);
     }
 
