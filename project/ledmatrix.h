@@ -1,9 +1,7 @@
 #include <bcm2835.h>
 #include <math.h>
 #include "font/font8x8.h"
-#include "font/font8x6.h"
 #include "font/font6x5.h"
-#include "font/font3x5.h"
 
 #define RED_UPPER RPI_V2_GPIO_P1_29   //GPIO5
 #define GREEN_UPPER RPI_V2_GPIO_P1_33 //GPIO 13
@@ -21,9 +19,6 @@
 #define ADDRESS_C RPI_V2_GPIO_P1_13 //GPIO 27
 #define ADDRESS_D RPI_V2_GPIO_P1_38 //GPIO 20
 
-#define CHAR_WIDTH 8
-#define CHAR_HEIGHT 6
-
 #define ADDRESS_MASK 0xF
 
 #define LED_PANEL_WIDTH 64
@@ -32,6 +27,9 @@
 
 #define LOGO_HEIGHT 24
 #define LOGO_WIDTH 24
+
+#define SOCCER_BALL_HEIGHT 11
+#define SOCCER_BALL_WIDTH 11
 
 int setup(void)
 {
@@ -211,7 +209,7 @@ int draw233(u_int8_t width, u_int8_t height, u_int8_t matrix[LED_PANEL_HEIGHT][L
             selectRow(i);
             bcm2835_gpio_write(OE, LOW);
             delayMicroseconds(pow(2, b));
-            // bcm2835_gpio_write(OE, HIGH);
+            bcm2835_gpio_write(OE, HIGH);
         }
     }
     return 0;
@@ -237,7 +235,7 @@ int addScore(char *score1,
              u_int8_t startX,
              u_int8_t startY,
              u_int8_t matrix[LED_PANEL_HEIGHT][LED_PANEL_WIDTH],
-             unsigned char font[128][8],
+             const unsigned char font[128][8],
              u_int8_t charWidth,
              u_int8_t charHeight
 
