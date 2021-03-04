@@ -1,5 +1,7 @@
+#include <stdio.h>
 #include <bcm2835.h>
 #include <math.h>
+#include <assert.h>
 #include "font/font8x8.h"
 #include "font/font6x5.h"
 
@@ -87,8 +89,7 @@ int clockData(void)
 
 int selectRow(int x)
 {
-    //TODO: validate x
-
+    assert(x >= 0 && x <= 31);
     bcm2835_gpio_write(ADDRESS_A, (x & ADDRESS_MASK) & (1 << 0));
     delayMicroseconds(5);
     bcm2835_gpio_write(ADDRESS_B, (x & ADDRESS_MASK) & (1 << 1));
@@ -109,7 +110,11 @@ int latchData(void)
 
 int drawChar(char c, u_int8_t row, u_int8_t column, unsigned char font[128][8], u_int8_t charWidth, u_int8_t charHeight)
 {
-    //TODO: do validation of parameters;
+    assert(row >= 0 && charHeight > 0 && charHeight <= 8);
+    assert((row + charHeight) <= 32);
+
+    assert(column >= 0 && charWidth > 0 && charWidth <= 8);
+    assert(column < 64);
 
     u_int8_t charIndex = c;
     const u_int8_t *chr = font[charIndex];
@@ -156,7 +161,10 @@ int drawChar(char c, u_int8_t row, u_int8_t column, unsigned char font[128][8], 
 
 int draw233(u_int8_t width, u_int8_t height, u_int8_t matrix[LED_PANEL_HEIGHT][LED_PANEL_WIDTH], u_int8_t x, int y)
 {
-    //validation of inputs
+
+    assert(x >= 0 && height >= 0 && height <= 32);
+    assert(y < 64 && y >= 0);
+
     for (u_int8_t i = x; i < x + height; i++)
     {
         for (u_int8_t b = 0; b < 3; b++)
@@ -179,7 +187,7 @@ int draw233(u_int8_t width, u_int8_t height, u_int8_t matrix[LED_PANEL_HEIGHT][L
                     colorLower = matrix[i - x][j - y];
                     colorUpper = matrix[i - x][j - y];
 
-                    blue1 = b > 2 ? 0 : colorUpper & (1 << b);
+                    blue1 = b == 0 ? 0 : colorUpper & (1 << (b - 1));
                     green1 = colorUpper & (1 << (b + 2));
                     red1 = colorUpper & (1 << (b + 5));
 
@@ -208,7 +216,7 @@ int draw233(u_int8_t width, u_int8_t height, u_int8_t matrix[LED_PANEL_HEIGHT][L
             latchData();
             selectRow(i);
             bcm2835_gpio_write(OE, LOW);
-            delayMicroseconds(pow(2, b));
+            delayMicroseconds(5 * pow(2, b));
             bcm2835_gpio_write(OE, HIGH);
         }
     }
@@ -217,6 +225,12 @@ int draw233(u_int8_t width, u_int8_t height, u_int8_t matrix[LED_PANEL_HEIGHT][L
 
 int drawText(const char *str, u_int8_t x, u_int8_t y, unsigned char font[128][8], u_int8_t charWidth, u_int8_t charHeight)
 {
+    assert(x >= 0 && y >= 0);
+    assert(x <= 32 && y <= 64);
+
+    assert(charWidth > 0 && charWidth <= 8);
+    assert(charHeight > 0 && charHeight <= 8);
+
     while (*str)
     {
         if (LED_PANEL_WIDTH - y < charWidth)
@@ -241,6 +255,13 @@ int addScore(char *score1,
 
 )
 {
+
+    assert(startX >= 0 && startY >= 0);
+    assert(startX < 32 && startY < 64);
+
+    assert(charWidth > 0 && charWidth <= 8);
+    assert(charHeight > 0 && charHeight <= 8);
+
     char *str = score1;
     u_int8_t x = startX;
     u_int8_t y = startY;
@@ -265,6 +286,9 @@ int addScore(char *score1,
 
 int addTime(u_int8_t matrix[LED_PANEL_HEIGHT][LED_PANEL_WIDTH], char *time, u_int8_t x, u_int8_t y)
 {
+    assert(x >= 0 && y >= 0);
+    assert(x < 32 && y < 64);
+
     addScore(time, x, y, matrix, smallFont, 6, 5);
     return 0;
 }
@@ -278,7 +302,12 @@ int merge(u_int8_t matrix1[LOGO_HEIGHT][LOGO_WIDTH],
           u_int8_t matrix[LED_PANEL_HEIGHT][LED_PANEL_WIDTH])
 {
 
-    //TODO: optimize this to do in one loop (with row and column counter)
+    assert(x1 >= 0 && x1 < 32);
+    assert(y1 >= 0 && y1 < 64);
+
+    assert(x2 >= 0 && x2 < 32);
+    assert(y2 >= 0 && y2 < 64);
+
     for (u_int8_t i = x1; i < LOGO_HEIGHT + x1; i++)
     {
         for (u_int8_t j = y1; j < LOGO_WIDTH + y1; j++)
@@ -292,6 +321,29 @@ int merge(u_int8_t matrix1[LOGO_HEIGHT][LOGO_WIDTH],
         for (u_int8_t j = y2; j < LOGO_WIDTH + y2; j++)
         {
             matrix[i][j] = matrix2[i - x2][j - y2];
+        }
+    }
+
+    return 1;
+}
+
+int draw(int height, int width, u_int8_t matrix1[height][width],
+         u_int8_t x,
+         u_int8_t y,
+         u_int8_t matrix[LED_PANEL_HEIGHT][LED_PANEL_WIDTH])
+{
+
+    assert(x >= 0 && x < 32);
+    assert(y >= 0 && y < 64);
+
+    assert(height > 0 && height <= 32);
+    assert(width > 0 && width <= 64);
+
+    for (u_int8_t i = x; i < height + x; i++)
+    {
+        for (u_int8_t j = y; j < width + y; j++)
+        {
+            matrix[i][j] = matrix1[i - x][j - y];
         }
     }
 
