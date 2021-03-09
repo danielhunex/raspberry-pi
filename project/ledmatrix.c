@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
-#include "chelsea.h"
+#include "teams.h"
 #include <time.h>
 #include <sched.h>
 #include <stdlib.h>

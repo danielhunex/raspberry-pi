@@ -1,10 +1,10 @@
 all: output_file_name
 
-output_file_name: main.o
-	gcc main.o -lbcm2835 -o output_file_name
+output_file_name: matrix.o
+	gcc -Wall -pedantic ledmatrix.c  -l bcm2835 -l m -o
 
-main.o: main.c
-	gcc -c main.c
+matrix.o: ledmatrix.c
+	gcc -c ledmatrix.c
 
 clean:
 	rm -rf *o output_file_name
