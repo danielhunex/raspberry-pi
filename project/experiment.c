@@ -29,6 +29,8 @@
 #define ADDRESS_D RPI_V2_GPIO_P1_38 //GPIO 20
 #define ADDRESS_E RPI_V2_GPIO_P1_18 //GPIO 24
 
+// Will set the GPIO to output
+// Clear GPIO values 
 int setup(void)
 {
     // Set the pin to be an output
@@ -57,6 +59,9 @@ int setup(void)
     bcm2835_gpio_clr(RED_LOWER);
     return 1;
 }
+
+//The main fuction for the experiment
+//experimenting two create two lines
 int main(void)
 {
     int intialized = bcm2835_init();

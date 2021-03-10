@@ -26,6 +26,12 @@
 
 #define ISOLATED_CORE 3
 
+
+//Sets the CPU affinity to core 3
+//calls to bcm2835_int() to initialize
+//merges various data needed to display score board
+//run infinity loop to create the display
+
 int main(void)
 {
 
@@ -52,11 +58,11 @@ int main(void)
     char *score = "0";
     char *score2 = "1";
 
-    addScore(score, 0, 8, matrix, font8x8_basic, 8, 8);   //GET IT FROM Service
-    addScore(score2, 0, 50, matrix, font8x8_basic, 8, 8); //GET it from service
+    addScore(score, 0, 8, matrix, font8x8_basic, 8, 8);   
+    addScore(score2, 0, 50, matrix, font8x8_basic, 8, 8);
 
-    merge(manchesterFc, 8, 0, chelseaFC, 8, 40, matrix); //bring the data from API
-                                                         //   draw(32, 46, UW, 0, 8, matrix);
+    merge(manchesterFc, 8, 0, chelseaFC, 8, 40, matrix);
+                                                         
 
     int minutes = 0;
     int seconds = 0;

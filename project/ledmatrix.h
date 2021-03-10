@@ -44,6 +44,8 @@
 #define SOCCER_BALL_HEIGHT 11
 #define SOCCER_BALL_WIDTH 11
 
+// Will set the GPIO to output
+// Clear GPIO values 
 int setup(void)
 {
     // Set the pin to be an output
@@ -91,6 +93,7 @@ int setup(void)
     return 0;
 }
 
+//High and low to clock GPIO for clocking data
 int clockData(void)
 {
     bcm2835_gpio_write(CLK, HIGH);
@@ -98,6 +101,7 @@ int clockData(void)
     return 0;
 }
 
+//sets which address should be provided with the bits
 int selectRow(int x)
 {
     assert(x >= 0 && x <= 31);
@@ -112,6 +116,7 @@ int selectRow(int x)
     return 0;
 }
 
+//HIGH and Low Latch GPIO for latching bits
 int latchData(void)
 {
     bcm2835_gpio_write(LATCH, HIGH);
@@ -119,6 +124,7 @@ int latchData(void)
     return 0;
 }
 
+//used to draw characters
 int drawChar(char c, u_int8_t row, u_int8_t column, unsigned char font[128][8], u_int8_t charWidth, u_int8_t charHeight)
 {
     assert(row >= 0 && charHeight > 0 && charHeight <= 8);
@@ -170,6 +176,7 @@ int drawChar(char c, u_int8_t row, u_int8_t column, unsigned char font[128][8], 
     return 0;
 }
 
+//used to draw image matrix with 8-bit pixel reprsentation and 332 color scheme
 int draw233(u_int8_t width, u_int8_t height, u_int8_t matrix[LED_PANEL_HEIGHT][LED_PANEL_WIDTH], u_int8_t x, int y)
 {
 
@@ -234,6 +241,7 @@ int draw233(u_int8_t width, u_int8_t height, u_int8_t matrix[LED_PANEL_HEIGHT][L
     return 0;
 }
 
+//draws a string/text on the LED matrix using the provided font
 int drawText(const char *str, u_int8_t x, u_int8_t y, unsigned char font[128][8], u_int8_t charWidth, u_int8_t charHeight)
 {
     assert(x >= 0 && y >= 0);
@@ -256,6 +264,7 @@ int drawText(const char *str, u_int8_t x, u_int8_t y, unsigned char font[128][8]
     return 1;
 }
 
+//utility function to add score data to the image matrix
 int addScore(char *score1,
              u_int8_t startX,
              u_int8_t startY,
@@ -295,6 +304,7 @@ int addScore(char *score1,
     return 0;
 }
 
+//helper function to add time to the image matrix array
 int addTime(u_int8_t matrix[LED_PANEL_HEIGHT][LED_PANEL_WIDTH], char *time, u_int8_t x, u_int8_t y)
 {
     assert(x >= 0 && y >= 0);
@@ -304,6 +314,7 @@ int addTime(u_int8_t matrix[LED_PANEL_HEIGHT][LED_PANEL_WIDTH], char *time, u_in
     return 0;
 }
 
+//helper function to add logos (24 x 24) array  to the matrix (64 x 32) array
 int merge(u_int8_t matrix1[LOGO_HEIGHT][LOGO_WIDTH],
           u_int8_t x1,
           u_int8_t y1,
@@ -332,29 +343,6 @@ int merge(u_int8_t matrix1[LOGO_HEIGHT][LOGO_WIDTH],
         for (u_int8_t j = y2; j < LOGO_WIDTH + y2; j++)
         {
             matrix[i][j] = matrix2[i - x2][j - y2];
-        }
-    }
-
-    return 1;
-}
-
-int draw(int height, int width, u_int8_t matrix1[height][width],
-         u_int8_t x,
-         u_int8_t y,
-         u_int8_t matrix[LED_PANEL_HEIGHT][LED_PANEL_WIDTH])
-{
-
-    assert(x >= 0 && x < 32);
-    assert(y >= 0 && y < 64);
-
-    assert(height > 0 && height <= 32);
-    assert(width > 0 && width <= 64);
-
-    for (u_int8_t i = x; i < height + x; i++)
-    {
-        for (u_int8_t j = y; j < width + y; j++)
-        {
-            matrix[i][j] = matrix1[i - x][j - y];
         }
     }
 
